@@ -3,6 +3,7 @@ package edu.chnu.lab1;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.*;
 
 public class Lab1_Wave {
 
@@ -15,26 +16,32 @@ public class Lab1_Wave {
         int size = in.nextInt();
         array = new long[size];
         for (int i = 0; i < size; i++) {
-            array[i] = in.nextLong();
+            array[i] = i + 1;
         }
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int delta = Math.max((int) Math.ceil(Math.log(size) / Math.log(availableProcessors)), 1);
-        List<WaveThread> threadList = new ArrayList<>();
         int waveNumber = (int) Math.ceil(Math.log(size) / Math.log(2));
         int midPos = size / 2 + size % 2;
         endPos = size;
+        List<Future> futures = new ArrayList<>();
         for (int w = 0; w < waveNumber; w++) {
             System.out.println("Хвиля " + w);
-            threadList.clear();
             List<Integer> indices = getListOfIndices(endPos, delta);
+            ExecutorService executor = Executors.newFixedThreadPool((int) Math.ceil(Math.log(endPos) / Math.log(2)));
+            futures.clear();
             for (int i = 0; i < indices.size() - 1; i++) {
-                threadList.add(new WaveThread(indices.get(i), indices.get(i + 1)));
+                futures.add(executor.submit(new WaveThread(indices.get(i), indices.get(i + 1))));
             }
-            for (WaveThread thread : threadList) {
-                thread.start();
-            }
-            for (WaveThread thread : threadList) {
-                thread.waitForCalc();
+            executor.shutdown();
+            while (!futures.stream().allMatch(future -> {
+                try {
+                    return future.get() == null;
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+                return false;
+            })) {
+                executor.awaitTermination(10_000L, TimeUnit.MILLISECONDS);
             }
             endPos = midPos;
             midPos = endPos / 2 + endPos % 2;
@@ -54,23 +61,19 @@ public class Lab1_Wave {
     }
 }
 
-class WaveThread extends Thread {
+class WaveThread implements Runnable {
 
     private int startIndex, endIndex;
-
-    private boolean endFlag;
 
     public WaveThread(int startIndex, int endIndex) {
         this.startIndex = startIndex;
         this.endIndex = endIndex;
-        endFlag = false;
     }
 
     @Override
-    public synchronized void run() {
+    public void run() {
         calculateSum();
-        System.out.println("Потік " + this.getName() + " завершив роботу.");
-        notifyAll();
+        System.out.println("Потік " + Thread.currentThread().getName() + " завершив поточні обчислення.");
     }
 
     private void calculateSum() {
@@ -80,13 +83,6 @@ class WaveThread extends Thread {
                     Lab1_Wave.array[i] += Lab1_Wave.array[Lab1_Wave.endPos - i - 1];
                 }
             }
-        }
-        endFlag = true;
-    }
-
-    public synchronized void waitForCalc() throws InterruptedException {
-        while (!endFlag) {
-            wait();
         }
     }
 }

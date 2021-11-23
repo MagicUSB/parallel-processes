@@ -14,7 +14,7 @@ public class Lab1_PartArray {
         int size = in.nextInt();
         array = new int[size];
         for (int i = 0; i < size; i++) {
-            array[i] = in.nextInt();
+            array[i] = i + 1;
         }
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         List<PartArrayThread> threadList = new ArrayList<>();
