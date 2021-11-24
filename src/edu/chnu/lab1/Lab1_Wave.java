@@ -41,7 +41,7 @@ public class Lab1_Wave {
                 }
                 return false;
             })) {
-                executor.awaitTermination(10_000L, TimeUnit.MILLISECONDS);
+                executor.awaitTermination(100, TimeUnit.MILLISECONDS);
             }
             endPos = midPos;
             midPos = endPos / 2 + endPos % 2;
